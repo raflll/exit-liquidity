@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You Are the Exit Liquidity</title>
+<style>
+:root{--bg:#0F1419;--panel:#1A222B;--ink:#F2F4F7;--muted:#9AA5B1;--grid:#2A333D;--loss:#EE5548;--house:#14A196;--amber:#FFB627}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
+.s{display:none;position:absolute;inset:0;padding:40px 56px 0}
+.s.active{display:block;animation:in .3s ease}
+h1{margin:0 0 20px;font-size:40px;line-height:1.1;letter-spacing:-.5px}
+.src{position:absolute;left:56px;right:56px;bottom:50px;color:var(--muted);font-size:16px;line-height:1.3}
+.step{opacity:0;transition:opacity .4s}.step.on{opacity:1}
+button{font:inherit;color:var(--ink);background:var(--panel);border:1.5px solid var(--grid);border-radius:8px;padding:10px 18px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+button:disabled{opacity:.35;cursor:default}
+#nav{position:absolute;right:56px;bottom:12px;display:flex;gap:10px;align-items:center;color:var(--muted);font-size:14px;z-index:5}
+#nav button{padding:3px 12px;font-size:16px;color:var(--muted)}
+@keyframes in{from{opacity:0}to{opacity:1}}
+@keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+@keyframes rise{from{transform:scaleY(0)}}
+@keyframes late{0%,70%{opacity:0}100%{opacity:1}}
+.rise{transform-box:fill-box;transform-origin:50% 100%;animation:rise .5s ease-out both}
+.callout{animation:late 1.8s both}
+.chart-text{font-family:Arial,Helvetica,sans-serif;fill:var(--muted);font-size:17px}
+.chart-strong{font-family:Arial,Helvetica,sans-serif;fill:var(--ink);font-size:21px;font-weight:700}
+[data-tip]{cursor:default}
+#tip{position:fixed;display:none;background:var(--ink);color:var(--bg);font-size:15px;padding:6px 10px;border-radius:6px;pointer-events:none;z-index:9;max-width:280px}
+
+/* title */
+#title.active{display:flex;flex-direction:column;justify-content:center}
+#title-chart{position:absolute;inset:0;opacity:.22}
+#title h1{position:relative;font-size:84px;max-width:900px;margin-bottom:24px}
+#title p{position:relative;font-size:26px;color:var(--muted);margin:0 0 8px}
+#title .hint{font-size:16px;margin-top:30px}
+kbd{font:inherit;color:var(--ink);border:1px solid var(--grid);border-radius:4px;padding:1px 7px}
+
+/* game */
+#game{display:grid;grid-template-columns:880px 1fr;gap:24px}
+#game-chart{background:var(--panel);border-radius:10px;height:420px;display:block;width:880px}
+.score{margin-bottom:22px}
+.score small{display:block;color:var(--muted);font-size:17px;margin-bottom:4px}
+.score b{font-size:44px;font-variant-numeric:tabular-nums}
+.controls{display:flex;gap:12px;margin-top:18px;align-items:center}
+.controls button{font-size:22px;font-weight:700;padding:14px 34px}
+#buy{background:var(--house);border-color:var(--house);color:var(--bg)}
+#sell{background:var(--loss);border-color:var(--loss);color:var(--bg)}
+#game-msg{font-size:21px;margin-left:12px}
+
+/* waffle */
+.split{display:grid;grid-template-columns:1fr 520px;gap:40px;align-items:center;height:540px}
+.huge{font-size:190px;font-weight:700;line-height:1;letter-spacing:-6px}
+.lede{font-size:30px;line-height:1.25;margin:10px 0 0;max-width:560px}
+#waffle{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;width:500px;height:500px}
+#waffle i{border-radius:7px;background:var(--loss);animation:pop .3s both}
+#waffle i.win{background:var(--house)}
+
+/* why */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:56px}
+.two h2{font-size:27px;margin:0 0 6px}
+.two .sub{color:var(--muted);font-size:19px;margin:0 0 12px}
+.stat{font-size:150px;font-weight:700;letter-spacing:-5px;line-height:1.05;margin-top:50px}
+.stat-note{font-size:25px;line-height:1.3;margin-top:10px}
+
+/* route */
+.route{display:flex;align-items:center;gap:16px;margin:12px 0 44px}
+.route div{flex:1;background:var(--panel);border:2px solid var(--grid);border-radius:10px;padding:24px 10px;text-align:center;font-size:26px;font-weight:700}
+.route div small{display:block;font-size:18px;font-weight:400;color:var(--muted);margin-top:4px}
+.route div.you{border-color:var(--loss)}.route div.mm{border-color:var(--house)}
+.route span{font-size:36px;color:var(--muted)}
+.bar-title{font-size:22px;color:var(--muted);margin-bottom:12px}
+.bar{display:flex;gap:3px;height:120px}
+.bar div{display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:var(--bg);border-radius:6px}
+.bar-labels{display:flex;gap:3px;margin-top:10px;font-size:21px;text-align:center}
+
+/* sim */
+.sim{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.sim h2{font-size:24px;margin:0 0 8px;min-height:30px}
+.sim canvas{width:570px;height:400px;display:block}
+#rerun{position:absolute;right:56px;bottom:82px;font-size:17px;z-index:3}
+
+/* closing */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:10px}
+.card{background:var(--panel);border-radius:12px;padding:40px 40px 34px}
+.card h2{margin:0 0 28px;font-size:36px;display:flex;align-items:center;gap:14px}
+.card h2 i{width:22px;height:22px;border-radius:50%;display:inline-block}
+.card p{font-size:32px;margin:22px 0}
+.closer{font-size:42px;font-weight:700;color:var(--amber);margin-top:56px;line-height:1.2}
+
+/* cited */
+#cited{font-size:21px;line-height:1.35}
+#cited p{margin:0 0 18px;padding-left:44px;text-indent:-44px;overflow-wrap:anywhere}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main id="stage">
+
+<section class="s" id="title">
+  <svg id="title-chart" viewBox="0 0 1280 720" preserveAspectRatio="none" aria-hidden="true"></svg>
+  <h1>You Are the Exit Liquidity</h1>
+  <p>Why day traders lose, and who is on the other side</p>
+  <p>Justin Bonner · WRS 106</p>
+  <p class="hint"><kbd>→</kbd> next &nbsp; <kbd>F</kbd> fullscreen</p>
+</section>
+
+<section class="s" data-name="game">
+  <h1>Would you buy or sell?</h1>
+  <div id="game">
+    <div>
+      <svg id="game-chart" viewBox="0 0 880 420" role="img" aria-label="Candlestick price chart with the next stretch of prices hidden"></svg>
+      <div class="controls">
+        <button id="buy">Buy ↑</button>
+        <button id="sell">Sell ↓</button>
+        <button id="again" hidden>Next chart</button>
+        <span id="game-msg" aria-live="polite"></span>
+      </div>
+    </div>
+    <div>
+      <div class="score"><small id="round">Chart 1 of 3</small></div>
+      <div class="score"><small>Your profit</small><b id="you">$0</b></div>
+      <div class="score"><small>Spread the market maker collected</small><b id="mm">$0</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="s" data-label="97%">
+  <div class="split">
+    <div>
+      <div class="huge">97%</div>
+      <p class="lede">of day traders who kept at it for 300+ days lost money</p>
+    </div>
+    <div id="waffle" role="img" aria-label="Grid of 100 squares, 97 representing traders who lost money and 3 who did not"></div>
+  </div>
+  <p class="src">Brazilian equity futures day traders who began 2013–2015 (Chague et al.).</p>
+</section>
+
+<section class="s">
+  <h1>So why does anyone keep playing?</h1>
+  <div class="two">
+    <div>
+      <h2>Your brain protects losers</h2>
+      <p class="sub">Share of positions investors chose to sell</p>
+      <svg id="dispo" viewBox="0 0 540 400" width="540" height="400" role="img" aria-label="Bar chart: investors sold 14.8 percent of winning positions and 9.8 percent of losing positions"></svg>
+    </div>
+    <div class="step" data-step="1">
+      <h2>The app finds the crowd</h2>
+      <p class="sub">Robinhood's most-bought stocks of the day</p>
+      <div class="stat">−4.7%</div>
+      <p class="stat-note">average abnormal return over the next 20 days</p>
+    </div>
+  </div>
+  <p class="src">(Odean 1783); (Barber et al. 3141).</p>
+</section>
+
+<section class="s" data-label="Order route" style="padding-top:96px">
+  <div class="route">
+    <div class="you">You tap Buy</div><span aria-hidden="true">→</span>
+    <div>Your broker<small>gets paid to route it</small></div><span aria-hidden="true">→</span>
+    <div class="mm">Market maker<small>takes the other side</small></div>
+  </div>
+  <div class="step" data-step="1">
+    <div class="bar-title">Who filled US retail stock orders</div>
+    <div class="bar">
+      <div style="flex:41;background:#14A196" data-tip="Citadel Securities: 41%">41%</div>
+      <div style="flex:26;background:#6FDAD0" data-tip="Virtu Financial: 26%">26%</div>
+      <div style="flex:16;background:#B4ECE6" data-tip="G1 Execution Services: 16%">16%</div>
+      <div style="flex:17;background:var(--grid);color:var(--ink)" data-tip="Remainder of the market: 17%">17%</div>
+    </div>
+    <div class="bar-labels">
+      <div style="flex:41">Citadel Securities</div><div style="flex:26">Virtu</div><div style="flex:16">G1</div><div style="flex:17">Everyone else</div>
+    </div>
+  </div>
+  <p class="src">(Su 1). “Everyone else” is the remainder after the top three.</p>
+</section>
+
+<section class="s" data-label="The spread" style="padding-top:66px">
+  <svg id="spread" viewBox="0 0 1168 500" width="1168" height="500" role="img" aria-label="Diagram: a trader buys at the higher ask price of 100.05 and sells at the lower bid price of 99.95; the market maker keeps the difference"></svg>
+  <p class="src">Illustrative prices. Market makers “make money through spreads” (Su 1).</p>
+</section>
+
+<section class="s">
+  <h1>Same coin flips, opposite seats</h1>
+  <button id="rerun">Run again</button>
+  <div class="sim">
+    <div><h2 id="left-title">&nbsp;</h2><canvas id="c-left" width="1140" height="800" role="img" aria-label="Simulated profit paths for 70 of 1,000 zero-skill traders, most drifting below zero"></canvas></div>
+    <div class="step" data-step="1"><h2 id="right-title">&nbsp;</h2><canvas id="c-right" width="1140" height="800" role="img" aria-label="Simulated cumulative market maker profit rising almost in a straight line"></canvas></div>
+  </div>
+  <p class="src">Simulation, not market data: 1,000 traders with no skill, random price moves, an $11 spread per round trip.</p>
+</section>
+
+<section class="s">
+  <h1>One losing day in 1,278</h1>
+  <svg id="virtu" viewBox="0 0 1168 520" width="1168" height="520" role="img" aria-label="Histogram of Virtu's daily net trading income over 1,278 trading days. Nearly all days fall between 1 and 2 million dollars. A single day falls below zero."></svg>
+  <p class="src">Virtu's daily net trading income, Jan. 2009–Feb. 2014 (Virtu Financial 3).</p>
+</section>
+
+<section class="s">
+  <h1>Day traders are the exit liquidity</h1>
+  <div class="vs">
+    <div class="card"><h2><i style="background:var(--loss)"></i>Day trader</h2><p>Has to be right</p><p>Pays the spread</p><p>Makes a few big bets</p></div>
+    <div class="card"><h2><i style="background:var(--house)"></i>Market maker</h2><p>Doesn't care which way</p><p>Collects the spread</p><p>Makes millions of small bets</p></div>
+  </div>
+  <p class="closer">Every trade you make pays someone on the other side.</p>
+</section>
+
+<section class="s">
+  <h1>Works Cited</h1>
+  <div id="cited">
+    <p>Barber, Brad M., et al. “Attention-Induced Trading and Returns: Evidence from Robinhood Users.” <i>The Journal of Finance</i>, vol. 77, no. 6, 2022, pp. 3141-90. https://doi.org/10.1111/jofi.13183.</p>
+    <p>Chague, Fernando, et al. “Day Trading for a Living?” <i>SSRN</i>, 2020, https://doi.org/10.2139/ssrn.3423101.</p>
+    <p>Odean, Terrance. “Are Investors Reluctant to Realize Their Losses?” <i>The Journal of Finance</i>, vol. 53, no. 5, 1998, pp. 1775-98. https://doi.org/10.1111/0022-1082.00072.</p>
+    <p>Su, Eva. <i>Payment for Order Flow (PFOF) and Broker-Dealer Regulation</i>. Congressional Research Service, 20 Feb. 2024, www.everycrsreport.com/reports/IF12594.html.</p>
+    <p>Virtu Financial, Inc. <i>Amendment No. 2 to Form S-1 Registration Statement</i>. Securities and Exchange Commission, Apr. 2014, www.sec.gov/Archives/edgar/data/1592386/000104746914003675/filename2.pdf.</p>
+  </div>
+</section>
+
+<nav id="nav" aria-label="Screen navigation"><button id="prev" aria-label="Previous">‹</button><span id="count"></span><button id="next" aria-label="Next">›</button></nav>
+</main>
+<div id="tip" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const C = {bg:'#0F1419',panel:'#1A222B',ink:'#F2F4F7',muted:'#9AA5B1',grid:'#2A333D',loss:'#EE5548',house:'#14A196',amber:'#FFB627'};
+const calm = matchMedia('(prefers-reduced-motion:reduce)').matches;
+const rnorm = () => Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
+
+/* ---------- speaker notes: [click] marks a press of the next key ---------- */
+const NOTES = [
+`(10 sec) Let's play a game before I tell you anything. Press next.`,
+`(55 sec) Each of you has $10,000. Look at this chart. Hands up: buy or sell? [click Buy or Sell by majority]
+Watch the scoreboard. Your number swings around. The bottom number only goes one way.
+Play up to 3 charts, fewer if short on time.
+THE REVEAL: every chart you just traded came out of a random number generator. If you felt a pattern, your brain found a trend in noise, and so does everyone with a trading app.`,
+`(25 sec) My question: day trading is sold as a career, so how does it actually go? Researchers followed everyone who started day trading Brazilian futures from 2013 to 2015. Of those who stuck with it past 300 days, 97% lost money. And they found no evidence that people learn with practice.`,
+`(30 sec) If it loses money, why keep going? First, your brain. Investors sell winners about 1.5 times as readily as losers, so they lock in small wins and sit on big losses. [click]
+Second, the apps. When Robinhood users pile into the day's hottest stocks, those stocks underperform by 4.7% over the next month. The crowd arrives late.`,
+`(25 sec) So who's on the other side? When you tap Buy, your broker usually doesn't send it to a public exchange. A market maker pays for that order and takes the other side. That's why trading looks free. [click]
+It's concentrated: three firms handled more than 80%. Citadel Securities is a separate firm from the hedge fund Citadel, under the same founder.`,
+`(25 sec) Here's how they earn. At any moment there are two prices. [click] If you buy, you pay the higher one. [click] If you sell, you get the lower one. [click] The gap is the spread, and the market maker keeps it. Pennies, but on every single trade. Like a casino, they don't need to know how the next hand ends.`,
+`(30 sec) This is a simulation I wrote. 1,000 traders with zero skill, nobody cheating, one tiny spread each round trip. Watch them drift down. [click]
+Same trades, other seat. Nearly a straight line. Small edge, huge number of independent bets, so the luck cancels out. I set the spread so that the share of losers lands near the real 97%.
+HONEST LIMIT: real market makers also lose money when they trade against people who know more. This model leaves that out.`,
+`(25 sec) That was my simulation, this is real. When the market maker Virtu filed to go public, it published this chart. Each bar counts how many days the firm made that amount. Most days it made between one and two million dollars. Now look left of zero. Over five years and 1,278 trading days, that one small red bar is the only day it lost money.`,
+`(25 sec) So when people say retail is exit liquidity, this is the structure behind it. The trader needs to be right. The market maker needs you to show up. Over thousands of trades they almost always win, and day traders fund it. The takeaway isn't "never invest". The evidence is against frequent trading. Thank you, happy to take questions.`,
+`Leave this up during Q&A.
+"Does anyone beat it?" Yes, but under 1% of Taiwanese day traders reliably did, after fees.
+"Do market makers always win?" No. Knight Capital lost over $460 million in about 45 minutes from a software failure. Their edge is statistical, and it depends on systems working.
+"Isn't market making useful?" Yes. It means you can trade instantly. Paying for that convenience is fine, but betting on it for a living doesn't work.
+"Is 97% only Brazil?" That sample is Brazilian futures, but US and Taiwan studies point the same way.
+"So don't invest?" The evidence is against frequent trading, not long-term investing.`
+];
+
+/* ---------- candles ---------- */
+function genCandles(n, sd=.011){
+  const out=[]; let p=100;
+  for(let i=0;i<n;i++){
+    const o=p, c=o*Math.exp(sd*rnorm());
+    out.push({o,c,h:Math.max(o,c)*(1+Math.abs(sd*.4*rnorm())),l:Math.min(o,c)*(1-Math.abs(sd*.4*rnorm()))});
+    p=c;
+  }
+  return out;
+}
+function candleMarkup(data, W, H, slots, pad=14, upto=data.length){
+  const seen=data.slice(0,upto), hi=Math.max(...seen.map(d=>d.h)), lo=Math.min(...seen.map(d=>d.l));
+  const y=v=>pad+(hi-v)/(hi-lo)*(H-2*pad), step=(W-2*pad)/slots, bw=Math.max(2,step*.62);
+  const body=seen.map((d,i)=>{
+    const x=pad+step*(i+.5), col=d.c>=d.o?C.house:C.loss, top=y(Math.max(d.o,d.c));
+    return `<line x1="${x}" x2="${x}" y1="${y(d.h)}" y2="${y(d.l)}" stroke="${col}" stroke-width="1.5"/><rect x="${x-bw/2}" y="${top}" width="${bw}" height="${Math.max(1.5,y(Math.min(d.o,d.c))-top)}" fill="${col}"/>`;
+  }).join('');
+  return {body,y,step,pad};
+}
+$('#title-chart').innerHTML = candleMarkup(genCandles(90,.013),1280,720,90,40).body;
+
+/* ---------- game ---------- */
+const N=60, CUT=47, ROUNDS=3, SPREAD=11, STAKE=10000;
+const G={round:0,you:0,mm:0,phase:'choose',data:[],shown:CUT,dir:0,timer:null};
+const money=v=>(v<0?'−':v>0?'+':'')+'$'+Math.abs(Math.round(v)).toLocaleString('en-US');
+function drawGame(){
+  const W=880,H=420,{body,y,step,pad}=candleMarkup(G.data,W,H,N,22,G.shown);
+  const entry=G.data[CUT-1].c, cutX=pad+step*CUT;
+  let extra='';
+  if(G.phase==='choose') extra=`<rect x="${cutX}" y="0" width="${W-cutX}" height="${H}" fill="${C.bg}" opacity=".55"/><text x="${(cutX+W)/2}" y="${H/2+38}" text-anchor="middle" font-size="110" font-weight="700" font-family="Arial" fill="${C.amber}">?</text>`;
+  else extra=`<line x1="${cutX}" x2="${W}" y1="${y(entry)}" y2="${y(entry)}" stroke="${C.amber}" stroke-width="2" stroke-dasharray="6 6"/><text x="${cutX+6}" y="${y(entry)-9}" font-size="18" font-family="Arial" fill="${C.amber}">You ${G.dir>0?'bought':'sold'} here</text>`;
+  $('#game-chart').innerHTML=body+extra;
+}
+function showControls(){
+  const choosing=G.phase==='choose';
+  $('#buy').hidden=$('#sell').hidden=!choosing;
+  $('#again').hidden=G.phase!=='result';
+  $('#again').textContent=G.round>=ROUNDS?'Play again':'Next chart';
+  $('#round').textContent=`Chart ${Math.min(G.round+(G.phase==='result'?0:1),ROUNDS)} of ${ROUNDS}`;
+  $('#you').textContent=money(G.you);$('#mm').textContent=money(G.mm);
+}
+function newRound(){
+  clearInterval(G.timer);
+  if(G.round>=ROUNDS){G.round=0;G.you=0;G.mm=0}
+  G.data=genCandles(N);G.shown=CUT;G.phase='choose';G.dir=0;$('#game-msg').textContent='';
+  drawGame();showControls();
+}
+function choose(dir){
+  if(G.phase!=='choose')return;
+  G.dir=dir;G.phase='reveal';showControls();
+  const finish=()=>{
+    clearInterval(G.timer);G.shown=N;
+    const entry=G.data[CUT-1].c,exit=G.data[N-1].c,pnl=dir*(exit-entry)/entry*STAKE-SPREAD;
+    G.you+=pnl;G.mm+=SPREAD;G.round++;G.phase='result';drawGame();showControls();
+    $('#game-msg').textContent=`${money(pnl)} on that trade`;
+  };
+  if(calm)return finish();
+  G.timer=setInterval(()=>{G.shown++;drawGame();if(G.shown>=N)finish()},110);
+}
+$('#buy').onclick=()=>choose(1);$('#sell').onclick=()=>choose(-1);$('#again').onclick=newRound;
+
+/* ---------- waffle ---------- */
+$('#waffle').innerHTML=Array.from({length:100},(_,i)=>`<i class="${i>=97?'win':''}" style="animation-delay:${i*12}ms"></i>`).join('');
+
+/* ---------- disposition: Odean (1998), Table I ---------- */
+(function(){
+  const rows=[['Winners',14.8,C.house],['Losers',9.8,C.loss]],H=400,base=H-50,scale=(base-50)/14.8;
+  $('#dispo').innerHTML=rows.map(([t,v,c],i)=>{const x=70+i*220,w=170,h=v*scale;
+    return `<rect x="${x}" y="${base-h}" width="${w}" height="${h}" rx="4" fill="${c}" data-tip="${t} sold: ${v}%"/><text x="${x+w/2}" y="${base-h-14}" text-anchor="middle" font-family="Arial" font-size="42" font-weight="700" fill="${C.ink}">${v}%</text><text x="${x+w/2}" y="${H-14}" text-anchor="middle" font-family="Arial" font-size="24" fill="${C.ink}">${t}</text>`}).join('');
+})();
+
+/* ---------- spread diagram ---------- */
+(function(){
+  const ask=90,bid=390,x1=330,x2=880;
+  $('#spread').innerHTML=`
+  <rect class="step" data-step="3" x="${x1}" y="${ask}" width="${x2-x1}" height="${bid-ask}" fill="${C.amber}" opacity="0"/>
+  <line x1="${x1}" x2="${x2}" y1="${ask}" y2="${ask}" stroke="${C.loss}" stroke-width="6"/>
+  <line x1="${x1}" x2="${x2}" y1="${bid}" y2="${bid}" stroke="${C.house}" stroke-width="6"/>
+  <text x="${x2+22}" y="${ask+11}" font-family="Arial" font-size="32" font-weight="700" fill="${C.ink}">Ask $100.05</text>
+  <text x="${x2+22}" y="${bid+11}" font-family="Arial" font-size="32" font-weight="700" fill="${C.ink}">Bid $99.95</text>
+  <g class="step" data-step="1"><text x="${x1-90}" y="${ask+11}" text-anchor="end" font-family="Arial" font-size="32" fill="${C.ink}">You buy here</text><path d="M${x1-78} ${ask}H${x1-14}" stroke="${C.loss}" stroke-width="4"/><path d="M${x1-22} ${ask-10}l14 10l-14 10z" fill="${C.loss}"/></g>
+  <g class="step" data-step="2"><text x="${x1-90}" y="${bid+11}" text-anchor="end" font-family="Arial" font-size="32" fill="${C.ink}">You sell here</text><path d="M${x1-78} ${bid}H${x1-14}" stroke="${C.house}" stroke-width="4"/><path d="M${x1-22} ${bid-10}l14 10l-14 10z" fill="${C.house}"/></g>
+  <g class="step" data-step="3"><text x="${(x1+x2)/2}" y="${(ask+bid)/2-6}" text-anchor="middle" font-family="Arial" font-size="42" font-weight="700" fill="${C.amber}">The spread</text><text x="${(x1+x2)/2}" y="${(ask+bid)/2+38}" text-anchor="middle" font-family="Arial" font-size="28" fill="${C.ink}">the market maker keeps it</text></g>`;
+  const band=$('#spread rect.step');band.style.fill=C.amber;band.removeAttribute('opacity');band.setAttribute('fill-opacity','.14');
+})();
+
+/* ---------- simulation ---------- */
+const SIM={raf:0,data:null,left:null,right:null};
+function simulate(traders=1000,days=300,sd=100,cost=11){
+  const keep=70,paths=Array.from({length:keep},()=>new Float64Array(days)),house=new Float64Array(days);
+  let down=0,losing=0,mm=0;const cum=new Float64Array(traders);
+  for(let d=0;d<days;d++){
+    let today=0;
+    for(let t=0;t<traders;t++){const p=sd*rnorm()-cost;cum[t]+=p;today+=p;if(t<keep)paths[t][d]=cum[t]}
+    if(-today<0)losing++;mm-=today;house[d]=mm;
+  }
+  for(let t=0;t<traders;t++)if(cum[t]<0)down++;
+  return {paths,house,days,share:down/traders,losing,finals:paths.map(p=>p[days-1])};
+}
+function frame(cv,lo,hi,fmt,ticks){
+  const g=cv.getContext('2d');g.setTransform(2,0,0,2,0,0);g.clearRect(0,0,570,400);
+  const L=78,R=8,T=8,B=34,x=d=>L+d/299*(570-L-R),y=v=>T+(hi-v)/(hi-lo)*(400-T-B);
+  g.font='16px Arial';g.fillStyle=C.muted;g.textAlign='right';g.lineWidth=1;
+  ticks.forEach(v=>{g.strokeStyle=v===0?C.ink:C.grid;g.beginPath();g.moveTo(L,y(v));g.lineTo(570-R,y(v));g.stroke();g.fillText(fmt(v),L-10,y(v)+5)});
+  g.textAlign='center';g.fillText('Day 1',L+20,392);g.fillText('Day 300',570-R-34,392);
+  return {g,x,y};
+}
+const ticksFor=(lo,hi,step)=>{const t=[];for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step)t.push(v);return t};
+function animate(fn,done){
+  if(calm){fn(1);done&&done();return}
+  const t0=performance.now();cancelAnimationFrame(SIM.raf);
+  (function tick(now){const f=Math.min(1,(now-t0)/2200);fn(f);if(f<1)SIM.raf=requestAnimationFrame(tick);else done&&done()})(t0);
+}
+function drawLeft(f){
+  const s=SIM.data,lo=Math.min(...s.paths.map(p=>Math.min(...p)))*1.05,hi=Math.max(1200,...s.paths.map(p=>Math.max(...p)))*1.05;
+  const stepSize=(hi-lo)>12000?4000:2000;
+  const {g,x,y}=frame($('#c-left'),lo,hi,v=>(v<0?'−$':'$')+Math.abs(v).toLocaleString('en-US'),ticksFor(lo,hi,stepSize));
+  const n=Math.floor(f*299);g.lineWidth=1.2;g.globalAlpha=.7;
+  s.paths.forEach((p,i)=>{g.strokeStyle=s.finals[i]>=0?C.house:C.loss;g.beginPath();for(let d=0;d<=n;d++)d?g.lineTo(x(d),y(p[d])):g.moveTo(x(d),y(p[d]));g.stroke()});
+  g.globalAlpha=1;
+}
+function drawRight(f){
+  const s=SIM.data,hi=s.house[299]*1.06,{g,x,y}=frame($('#c-right'),0,hi,v=>'$'+(v/1e6).toFixed(0)+'M',ticksFor(0,hi,1e6));
+  const n=Math.floor(f*299);g.strokeStyle=C.house;g.lineWidth=4;g.lineJoin='round';g.beginPath();
+  for(let d=0;d<=n;d++)d?g.lineTo(x(d),y(s.house[d])):g.moveTo(x(d),y(s.house[d]));g.stroke();
+}
+function runLeft(){
+  $('#left-title').textContent='70 of 1,000 traders';
+  animate(drawLeft,()=>{$('#left-title').textContent=`${Math.round(SIM.data.share*100)}% of 1,000 traders ended down`});
+}
+function runRight(){
+  $('#right-title').textContent='The market maker';
+  animate(drawRight,()=>{const l=SIM.data.losing;$('#right-title').textContent=`Market maker: ${l} losing day${l===1?'':'s'} of 300`});
+}
+function startSim(both){
+  SIM.data=simulate();$('#right-title').innerHTML='&nbsp;';
+  if(both){drawLeft(1);$('#left-title').textContent=`${Math.round(SIM.data.share*100)}% of 1,000 traders ended down`;runRight()}else runLeft();
+}
+$('#rerun').onclick=()=>startSim(step>=1);
+
+/* ---------- virtu: Amendment No. 2 to Form S-1, daily income distribution ---------- */
+(function(){
+  const vals=[0,0,13,98,246,319,267,179,72,38,16,14,1,3,5,0,2,1,1,0];
+  const W=1168,H=520,L=64,R=8,T=16,B=74,slots=22,bw=(W-L-R)/slots,base=H-B;
+  const x=i=>L+i*bw,y=v=>T+(350-v)/350*(base-T),txt=(a,b,t,extra='')=>`<text x="${a}" y="${b}" font-family="Arial" ${extra}>${t}</text>`;
+  const days=n=>n+(n===1?' day':' days');
+  let s=`<rect x="${x(0)}" y="${T}" width="${bw}" height="${base-T}" fill="${C.loss}" fill-opacity=".14"/>`;
+  [100,200,300].forEach(v=>s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${C.grid}"/>`+txt(L-12,y(v)+6,v,`text-anchor="end" font-size="18" fill="${C.muted}"`));
+  s+=txt(0,T+14,'Days',`font-size="18" fill="${C.muted}"`);
+  const bar=(slot,n,col,delay,tip)=>{
+    const h=n?Math.max(9,base-y(n)):0;
+    if(n)s+=`<rect class="rise" style="animation-delay:${delay}ms" x="${x(slot)+2}" y="${base-h}" width="${bw-4}" height="${h}" rx="3" fill="${col}"/>`;
+    s+=`<rect x="${x(slot)}" y="${T}" width="${bw}" height="${base-T}" fill="transparent" data-tip="${tip}: ${days(n)}"/>`;
+  };
+  vals.forEach((n,i)=>bar(i+1,n,C.house,i*38,`$${(i*.25).toFixed(2)}M to $${((i+1)*.25).toFixed(2)}M`));
+  bar(21,2,C.house,800,'More than $5M');
+  bar(0,1,C.loss,900,'Less than $0');
+  s+=`<line x1="${L}" x2="${W-R}" y1="${base}" y2="${base}" stroke="${C.muted}" stroke-width="1.5"/><line x1="${x(1)}" x2="${x(1)}" y1="${T}" y2="${base+10}" stroke="${C.ink}" stroke-width="2"/>`;
+  [0,1,2,3,4,5].forEach(m=>s+=txt(x(1+m*4),base+32,m?`+$${m}M`:'$0',`text-anchor="middle" font-size="20" fill="${m?C.muted:C.ink}"${m?'':' font-weight="700"'}`));
+  s+=txt((L+W-R)/2,H-8,'How much the firm made that day',`text-anchor="middle" font-size="20" fill="${C.muted}"`);
+  const cx=x(0)+bw/2;
+  const ax=x(1)+44,ay=y(122),tipY=base-18;
+  s+=`<g class="callout"><path d="M${ax} ${ay}Q${ax-6} ${tipY-8} ${cx+9} ${tipY-3}" fill="none" stroke="${C.loss}" stroke-width="3"/><path d="M${cx} ${tipY}l13 -11l3 15z" fill="${C.loss}"/>`+txt(x(1)+16,y(195),'The only',`font-size="30" font-weight="700" fill="${C.ink}"`)+txt(x(1)+16,y(195)+36,'losing day',`font-size="30" font-weight="700" fill="${C.ink}"`)+`</g>`;
+  s+=`<g class="callout">`+txt(x(8.5),y(292),'79% of days',`font-size="46" font-weight="700" fill="${C.ink}"`)+txt(x(8.5),y(292)+36,'made between $1M and $2M',`font-size="27" fill="${C.ink}"`)+`</g>`;
+  $('#virtu').innerHTML=s;
+})();
+
+/* ---------- deck navigation ---------- */
+const sections=[...document.querySelectorAll('.s')];
+let cur=0,step=0;
+const maxStep=sec=>Math.max(0,...[...sec.querySelectorAll('[data-step]')].map(e=>+e.dataset.step));
+function setSteps(sec,n){sec.querySelectorAll('[data-step]').forEach(e=>e.classList.toggle('on',+e.dataset.step<=n))}
+const SIM_INDEX=sections.findIndex(s=>s.querySelector('#c-left'));
+function go(i,allSteps){
+  i=Math.max(0,Math.min(sections.length-1,i));
+  clearInterval(G.timer);cancelAnimationFrame(SIM.raf);
+  sections[cur].classList.remove('active');cur=i;
+  const sec=sections[cur];sec.classList.add('active');
+  step=allSteps?maxStep(sec):0;setSteps(sec,step);
+  if(sec.dataset.name==='game'&&G.phase!=='choose'&&G.phase!=='result')newRound();
+  if(cur===SIM_INDEX)startSim(step>=1);
+  $('#count').textContent=`${cur+1} / ${sections.length}`;
+  try{history.replaceState(null,'','#'+(cur+1))}catch(e){}
+  syncNotes();
+}
+function next(){
+  const sec=sections[cur];
+  if(step<maxStep(sec)){step++;setSteps(sec,step);if(cur===SIM_INDEX&&step===1)runRight();syncNotes()}
+  else if(cur<sections.length-1)go(cur+1);
+}
+function prev(){
+  if(step>0){step--;setSteps(sections[cur],step);syncNotes()}
+  else if(cur>0)go(cur-1,true);
+}
+$('#next').onclick=next;$('#prev').onclick=prev;
+
+function key(e){
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const k=e.key;
+  if(k==='ArrowRight'||k==='PageDown'||k===' '){e.preventDefault();next()}
+  else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();prev()}
+  else if(k==='n'||k==='N')openNotes();
+  else if(k==='f'||k==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}
+  else if(sections[cur].dataset.name==='game'){
+    if(k==='b'||k==='B')choose(1);
+    else if(k==='s'||k==='S')choose(-1);
+    else if(k==='Enter'&&G.phase==='result')newRound();
+  }
+}
+addEventListener('keydown',key);
+
+/* speaker notes window: stays on your laptop screen while the site is on the projector */
+let notesWin=null,notesStart=0;
+function openNotes(){
+  if(notesWin&&!notesWin.closed){notesWin.focus();return}
+  notesWin=window.open('','speaker_notes','width=620,height=720');
+  if(!notesWin){alert('Allow pop-ups for this page to see speaker notes.');return}
+  notesStart=Date.now();
+  notesWin.document.write(`<!doctype html><title>Speaker notes</title><body style="margin:0;padding:28px;background:#0F1419;color:#F2F4F7;font:24px/1.4 Arial,sans-serif"><div style="display:flex;justify-content:space-between;color:#9AA5B1;font-size:20px"><span id="pos"></span><span id="clock">0:00</span></div><div id="body" style="white-space:pre-wrap;margin-top:18px"></div><p id="up" style="color:#9AA5B1;font-size:18px"></p></body>`);
+  notesWin.document.close();
+  notesWin.addEventListener('keydown',key);
+  setInterval(()=>{if(notesWin&&!notesWin.closed){const s=Math.floor((Date.now()-notesStart)/1000);notesWin.document.getElementById('clock').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}},1000);
+  syncNotes();
+}
+function syncNotes(){
+  if(!notesWin||notesWin.closed)return;
+  const d=notesWin.document,max=maxStep(sections[cur]);
+  d.getElementById('pos').textContent=`Screen ${cur+1} of ${sections.length}${max?` · click ${step} of ${max}`:''}`;
+  d.getElementById('body').textContent=NOTES[cur];
+  const n=sections[cur+1];
+  d.getElementById('up').textContent=n?'Next: '+(n.querySelector('h1')?.textContent||n.dataset.label||''):'';
+}
+
+/* tooltips */
+const tip=$('#tip');
+document.addEventListener('mousemove',e=>{
+  const t=e.target.closest&&e.target.closest('[data-tip]');
+  if(!t){tip.style.display='none';return}
+  tip.textContent=t.dataset.tip;tip.style.display='block';
+  tip.style.left=Math.min(innerWidth-300,e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';
+});
+
+/* fit 1280x720 stage to any screen */
+function fit(){
+  const k=Math.min(innerWidth/1280,innerHeight/720),st=$('#stage');
+  st.style.transform=`translate(${(innerWidth-1280*k)/2}px,${(innerHeight-720*k)/2}px) scale(${k})`;
+}
+addEventListener('resize',fit);fit();
+
+newRound();
+const start=parseInt(location.hash.slice(1),10);
+sections[0].classList.add('active');
+go(start>=1?start-1:0);
+</script>
+</body>
+</html>
